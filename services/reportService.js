@@ -33,15 +33,22 @@ class ReportService {
                 u.id AS user_id,
                 u.name AS user_name,
                 u.email,
+                u.phone_number,
                 u.balance AS current_balance,
                 COUNT(t.id) AS total_transactions,
                 SUM(CASE WHEN t.status = 'SUCCESS' THEN 1 ELSE 0 END) AS success_count,
                 SUM(CASE WHEN t.status = 'FAILED' THEN 1 ELSE 0 END) AS failed_count,
                 SUM(CASE WHEN t.status = 'PENDING' THEN 1 ELSE 0 END) AS pending_count,
-                COALESCE(SUM(CASE WHEN t.status = 'SUCCESS' THEN t.amount ELSE 0 END), 0) AS total_spent
+                COALESCE(SUM(CASE WHEN t.status = 'SUCCESS' THEN t.amount ELSE 0 END), 0) AS total_spent,
+                CASE 
+                    WHEN COUNT(CASE WHEN t.status = 'SUCCESS' THEN 1 END) > 0 
+                    THEN COALESCE(SUM(CASE WHEN t.status = 'SUCCESS' THEN t.amount ELSE 0 END), 0) / COUNT(CASE WHEN t.status = 'SUCCESS' THEN 1 END)
+                    ELSE 0 
+                END AS average_transaction,
+                MAX(t.created_at) AS last_transaction
              FROM users u
              LEFT JOIN transactions t ON u.id = t.user_id ${dateFilter ? dateFilter.replace('AND', 'AND') : ''}
-             GROUP BY u.id, u.name, u.email, u.balance
+             GROUP BY u.id, u.name, u.email, u.phone_number, u.balance
              ORDER BY total_spent DESC`,
             values
         );
@@ -80,11 +87,21 @@ class ReportService {
             ? 'WHERE ' + conditions.join(' AND ')
             : '';
         
+        // Get total revenue first for percentage calculation
+        const [totalResult] = await pool.query(
+            `SELECT COALESCE(SUM(CASE WHEN t.status = 'SUCCESS' THEN t.amount ELSE 0 END), 0) as grand_total
+             FROM transactions t
+             ${start_date || end_date ? 'WHERE ' + conditions.filter(c => !c.includes('p.type')).join(' AND ') : ''}`,
+            values.filter((v, i) => !conditions[i]?.includes('p.type'))
+        );
+        const grandTotal = parseFloat(totalResult[0].grand_total) || 1;
+        
         const [rows] = await pool.query(
             `SELECT 
                 p.id AS product_id,
                 p.name AS product_name,
                 p.type AS product_type,
+                c.name AS category_name,
                 p.price AS current_price,
                 p.is_active,
                 COUNT(t.id) AS total_sold,
@@ -92,19 +109,24 @@ class ReportService {
                 COALESCE(SUM(CASE WHEN t.status = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS success_count,
                 COALESCE(SUM(CASE WHEN t.status = 'FAILED' THEN 1 ELSE 0 END), 0) AS failed_count
              FROM products p
+             LEFT JOIN categories c ON p.category_id = c.id
              LEFT JOIN transactions t ON p.id = t.product_id ${whereClause ? 'AND ' + conditions.join(' AND ') : ''}
-             GROUP BY p.id, p.name, p.type, p.price, p.is_active
+             GROUP BY p.id, p.name, p.type, c.name, p.price, p.is_active
              ORDER BY total_revenue DESC`,
             values
         );
         
-        return rows;
+        // Add percentage to each row
+        return rows.map(row => ({
+            ...row,
+            percentage_of_total: ((parseFloat(row.total_revenue) / grandTotal) * 100).toFixed(2)
+        }));
     }
 
     /**
      * Get failed transactions in date range
      * @param {object} options - Query options
-     * @returns {array} Failed transactions list
+     * @returns {object} Failed transactions list with summary
      */
     async getFailedTransactions(options = {}) {
         const { start_date = null, end_date = null, page = 1, limit = 20 } = options;
@@ -125,12 +147,13 @@ class ReportService {
         
         const whereClause = 'WHERE ' + conditions.join(' AND ');
         
-        // Get total count
-        const [countResult] = await pool.query(
-            `SELECT COUNT(*) as total FROM transactions t ${whereClause}`,
+        // Get total count and sum
+        const [summaryResult] = await pool.query(
+            `SELECT COUNT(*) as total, COALESCE(SUM(amount), 0) as total_amount FROM transactions t ${whereClause}`,
             values
         );
-        const totalItems = countResult[0].total;
+        const totalItems = summaryResult[0].total;
+        const totalLostRevenue = summaryResult[0].total_amount;
         const totalPages = Math.ceil(totalItems / limit);
         
         // Get failed transactions
@@ -165,6 +188,10 @@ class ReportService {
                 totalPages,
                 currentPage: page,
                 limit
+            },
+            summary: {
+                total_failed: totalItems,
+                total_lost_revenue: parseFloat(totalLostRevenue).toFixed(2)
             }
         };
     }
@@ -253,17 +280,24 @@ class ReportService {
                 success: transactionSummary[0].success_count || 0,
                 failed: transactionSummary[0].failed_count || 0,
                 pending: transactionSummary[0].pending_count || 0,
-                total_revenue: parseFloat(transactionSummary[0].total_revenue) || 0
+                total_revenue: parseFloat(transactionSummary[0].total_revenue) || 0,
+                average_transaction: transactionSummary[0].total_transactions > 0 
+                    ? (parseFloat(transactionSummary[0].total_revenue) / (transactionSummary[0].success_count || 1)).toFixed(2)
+                    : "0.00"
             },
             revenue_by_type: revenueByType,
-            recent_transactions: recentTransactions
+            recent_transactions: recentTransactions,
+            period: {
+                start_date: start_date || 'All time',
+                end_date: end_date || 'All time'
+            }
         };
     }
 
     /**
      * Get daily transaction summary
      * @param {object} options - Query options
-     * @returns {array} Daily summary
+     * @returns {object} Daily summary with totals
      */
     async getDailyTransactionSummary(options = {}) {
         const { start_date = null, end_date = null, days = 30 } = options;
@@ -286,7 +320,13 @@ class ReportService {
                 COUNT(*) as total_transactions,
                 SUM(CASE WHEN status = 'SUCCESS' THEN 1 ELSE 0 END) as success_count,
                 SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed_count,
-                COALESCE(SUM(CASE WHEN status = 'SUCCESS' THEN amount ELSE 0 END), 0) as daily_revenue
+                SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending_count,
+                COALESCE(SUM(CASE WHEN status = 'SUCCESS' THEN amount ELSE 0 END), 0) as daily_revenue,
+                CASE 
+                    WHEN SUM(CASE WHEN status = 'SUCCESS' THEN 1 ELSE 0 END) > 0 
+                    THEN COALESCE(SUM(CASE WHEN status = 'SUCCESS' THEN amount ELSE 0 END), 0) / SUM(CASE WHEN status = 'SUCCESS' THEN 1 ELSE 0 END)
+                    ELSE 0 
+                END as average_transaction
              FROM transactions
              ${dateFilter}
              GROUP BY DATE(created_at)
@@ -294,7 +334,21 @@ class ReportService {
             values
         );
         
-        return rows;
+        // Calculate summary
+        const totalDays = rows.length;
+        const totalTransactions = rows.reduce((sum, r) => sum + parseInt(r.total_transactions), 0);
+        const totalRevenue = rows.reduce((sum, r) => sum + parseFloat(r.daily_revenue), 0);
+        const dailyAverageRevenue = totalDays > 0 ? totalRevenue / totalDays : 0;
+        
+        return {
+            data: rows,
+            summary: {
+                total_days: totalDays,
+                total_transactions: totalTransactions,
+                total_revenue: totalRevenue.toFixed(2),
+                daily_average_revenue: dailyAverageRevenue.toFixed(2)
+            }
+        };
     }
 }
 

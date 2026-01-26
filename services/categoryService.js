@@ -166,7 +166,8 @@ class CategoryService {
         
         return {
             ...category,
-            products
+            products,
+            total_products: products.length
         };
     }
 

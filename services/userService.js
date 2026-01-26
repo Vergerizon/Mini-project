@@ -217,17 +217,24 @@ class UserService {
      * Add balance to user (for top up)
      * @param {number} userId - User ID
      * @param {number} amount - Amount to add
-     * @returns {object} Updated user
+     * @returns {object} Updated user with top up details
      */
     async addBalance(userId, amount) {
-        await this.getUserById(userId);
+        const user = await this.getUserById(userId);
+        const previousBalance = parseFloat(user.balance);
         
         await pool.query(
             'UPDATE users SET balance = balance + ? WHERE id = ?',
             [amount, userId]
         );
         
-        return this.getUserById(userId);
+        const updatedUser = await this.getUserById(userId);
+        
+        return {
+            ...updatedUser,
+            previous_balance: previousBalance.toFixed(2),
+            top_up_amount: parseFloat(amount).toFixed(2)
+        };
     }
 }
 

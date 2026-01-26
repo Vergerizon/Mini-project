@@ -310,7 +310,7 @@ class TransactionService {
     /**
      * Cancel/Refund a pending transaction (manual process)
      * @param {number} id - Transaction ID
-     * @returns {object} Updated transaction
+     * @returns {object} Updated transaction with refund details
      */
     async cancelTransaction(id) {
         const connection = await pool.getConnection();
@@ -332,6 +332,13 @@ class TransactionService {
             
             const transaction = transactions[0];
             
+            // Check if already cancelled
+            if (transaction.status === 'FAILED' && transaction.notes && transaction.notes.includes('Dibatalkan')) {
+                const error = new Error('Transaksi sudah dibatalkan sebelumnya');
+                error.status = 400;
+                throw error;
+            }
+            
             // Only SUCCESS transactions can be refunded
             if (transaction.status !== 'SUCCESS') {
                 const error = new Error('Hanya transaksi SUCCESS yang dapat dibatalkan');
@@ -345,6 +352,12 @@ class TransactionService {
                 [transaction.amount, transaction.user_id]
             );
             
+            // Get user's new balance
+            const [users] = await connection.query(
+                'SELECT balance FROM users WHERE id = ?',
+                [transaction.user_id]
+            );
+            
             // Update transaction status to FAILED (refunded)
             await connection.query(
                 "UPDATE transactions SET status = 'FAILED', notes = 'Dibatalkan dan dana dikembalikan' WHERE id = ?",
@@ -353,7 +366,13 @@ class TransactionService {
             
             await connection.commit();
             
-            return this.getTransactionById(id);
+            const updatedTransaction = await this.getTransactionById(id);
+            
+            return {
+                ...updatedTransaction,
+                refunded_amount: parseFloat(transaction.amount).toFixed(2),
+                user_new_balance: parseFloat(users[0].balance).toFixed(2)
+            };
             
         } catch (error) {
             await connection.rollback();

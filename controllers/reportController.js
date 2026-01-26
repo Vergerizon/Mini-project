@@ -73,12 +73,22 @@ class ReportController {
             
             const result = await reportService.getFailedTransactions(options);
             
-            return paginatedResponse(
-                res, 
-                result.data, 
-                result.pagination, 
-                SUCCESS_MESSAGES.REPORT_GENERATED
-            );
+            // Include summary in response
+            return res.status(HTTP_STATUS.OK).json({
+                success: true,
+                message: SUCCESS_MESSAGES.REPORT_GENERATED,
+                data: result.data,
+                pagination: {
+                    totalItems: result.pagination.totalItems,
+                    totalPages: result.pagination.totalPages,
+                    currentPage: result.pagination.currentPage,
+                    itemsPerPage: result.pagination.limit,
+                    hasNextPage: result.pagination.currentPage < result.pagination.totalPages,
+                    hasPrevPage: result.pagination.currentPage > 1
+                },
+                summary: result.summary,
+                timestamp: new Date().toISOString()
+            });
         } catch (error) {
             return errorResponse(
                 res, 
@@ -122,8 +132,15 @@ class ReportController {
                 days: parseInt(req.query.days) || 30
             };
             
-            const data = await reportService.getDailyTransactionSummary(options);
-            return successResponse(res, data, SUCCESS_MESSAGES.REPORT_GENERATED);
+            const result = await reportService.getDailyTransactionSummary(options);
+            
+            return res.status(HTTP_STATUS.OK).json({
+                success: true,
+                message: SUCCESS_MESSAGES.REPORT_GENERATED,
+                data: result.data,
+                summary: result.summary,
+                timestamp: new Date().toISOString()
+            });
         } catch (error) {
             return errorResponse(
                 res, 
