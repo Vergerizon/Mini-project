@@ -28,9 +28,10 @@ class ReportController {
             return successResponse(res, data, SUCCESS_MESSAGES.REPORT_GENERATED);
         } catch (error) {
             return errorResponse(
-                res, 
-                error.message, 
-                error.status || HTTP_STATUS.INTERNAL_SERVER_ERROR
+                res,
+                error && error.message ? error.message : 'Terjadi kesalahan',
+                error && error.status ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                error && error.details ? error.details : null
             );
         }
     }

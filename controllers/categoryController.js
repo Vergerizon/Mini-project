@@ -26,10 +26,22 @@ class CategoryController {
                 HTTP_STATUS.CREATED
             );
         } catch (error) {
+            // Map pesan error ke status code spesifik jika error.status tidak ada
+            let status = error && error.status ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR;
+            if (!error.status && error && error.message) {
+                if (error.message.toLowerCase().includes('not found') || error.message.toLowerCase().includes('tidak ditemukan')) {
+                    status = HTTP_STATUS.NOT_FOUND;
+                } else if (error.message.toLowerCase().includes('validasi') || error.message.toLowerCase().includes('validation')) {
+                    status = HTTP_STATUS.BAD_REQUEST;
+                } else if (error.message.toLowerCase().includes('sudah ada') || error.message.toLowerCase().includes('already exists')) {
+                    status = HTTP_STATUS.CONFLICT;
+                }
+            }
             return errorResponse(
-                res, 
-                error.message, 
-                error.status || HTTP_STATUS.INTERNAL_SERVER_ERROR
+                res,
+                error && error.message ? error.message : 'Terjadi kesalahan',
+                status,
+                error && error.details ? error.details : null
             );
         }
     }
