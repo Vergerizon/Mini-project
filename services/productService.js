@@ -5,6 +5,7 @@
 
 const { pool } = require('../database/config');
 const { ERROR_MESSAGES } = require('../utils/respons');
+const { toTitleCase } = require('../utils/capitalize');
 
 class ProductService {
     /**
@@ -14,7 +15,8 @@ class ProductService {
      */
     async createProduct(productData) {
         const { name, category_id, type, price, description, is_active = true } = productData;
-        
+        // Pastikan kapitalisasi nama produk
+        const fixedName = toTitleCase(name);
         // Validate category exists if provided
         if (category_id) {
             const [category] = await pool.query(
@@ -27,13 +29,11 @@ class ProductService {
                 throw error;
             }
         }
-        
         const [result] = await pool.query(
             `INSERT INTO products (name, category_id, type, price, description, is_active) 
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [name, category_id || null, type, price, description || null, is_active]
+            [fixedName, category_id || null, type, price, description || null, is_active]
         );
-        
         return this.getProductById(result.insertId);
     }
 
@@ -49,11 +49,11 @@ class ProductService {
             type = null, 
             category_id = null,
             is_active = null,
-            search = null 
+            search = null,
+            sortBy = 'p.created_at',
+            sortDir = 'DESC'
         } = options;
-        
         const offset = (page - 1) * limit;
-        
         // Build where clause
         const conditions = [];
         const values = [];
@@ -96,7 +96,7 @@ class ProductService {
              FROM products p
              LEFT JOIN categories c ON p.category_id = c.id
              ${whereClause}
-             ORDER BY p.created_at DESC 
+             ORDER BY ${sortBy} ${sortDir} 
              LIMIT ? OFFSET ?`,
             [...values, limit, offset]
         );
@@ -183,7 +183,7 @@ class ProductService {
         
         if (name !== undefined) {
             updates.push('name = ?');
-            values.push(name);
+            values.push(toTitleCase(name));
         }
         if (category_id !== undefined) {
             updates.push('category_id = ?');

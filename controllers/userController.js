@@ -44,9 +44,10 @@ class UserController {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 10;
-            
-            const result = await userService.getUsers(page, limit);
-            
+            const search = req.query.search || '';
+            const sortBy = req.query.sortBy || 'created_at';
+            const sortDir = req.query.sortDir || 'DESC';
+            const result = await userService.getUsers(page, limit, search, sortBy, sortDir);
             return paginatedResponse(
                 res, 
                 result.data, 

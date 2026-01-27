@@ -48,11 +48,11 @@ class ProductController {
                 type: req.query.type || null,
                 category_id: req.query.category_id ? parseInt(req.query.category_id) : null,
                 is_active: req.query.is_active !== undefined ? req.query.is_active : null,
-                search: req.query.search || null
+                search: req.query.search || null,
+                sortBy: req.query.sortBy || 'p.created_at',
+                sortDir: req.query.sortDir || 'DESC'
             };
-            
             const result = await productService.getProducts(options);
-            
             return paginatedResponse(
                 res, 
                 result.data, 

@@ -43,9 +43,11 @@ class CategoryController {
             const options = {
                 parent_id: req.query.parent_id !== undefined ? req.query.parent_id : null,
                 is_active: req.query.is_active !== undefined ? req.query.is_active : null,
-                flat: req.query.flat === 'true'
+                flat: req.query.flat === 'true',
+                search: req.query.search || '',
+                sortBy: req.query.sortBy || 'c.name',
+                sortDir: req.query.sortDir || 'ASC'
             };
-            
             const categories = await categoryService.getCategories(options);
             return successResponse(res, categories, 'Daftar category berhasil diambil');
         } catch (error) {

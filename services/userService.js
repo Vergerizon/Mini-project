@@ -5,6 +5,7 @@
 
 const { pool } = require('../database/config');
 const { ERROR_MESSAGES } = require('../utils/respons');
+const { toTitleCase } = require('../utils/capitalize');
 
 class UserService {
     /**
@@ -14,26 +15,50 @@ class UserService {
      */
     async createUser(userData) {
         const { name, email, phone_number } = userData;
-        
+        // Pastikan kapitalisasi nama
+        const fixedName = toTitleCase(name);
         // Check if email already exists
         const [existing] = await pool.query(
             'SELECT id FROM users WHERE email = ?',
             [email]
         );
-        
         if (existing.length > 0) {
             const error = new Error(ERROR_MESSAGES.USER_ALREADY_EXISTS);
             error.status = 409;
             throw error;
         }
-        
         // Create user with default balance = 0
         const [result] = await pool.query(
             'INSERT INTO users (name, email, phone_number, balance) VALUES (?, ?, ?, 0)',
-            [name, email, phone_number || null]
+            [fixedName, email, phone_number || null]
         );
-        
         return this.getUserById(result.insertId);
+    }
+
+    async updateUser(id, userData) {
+        const { name, email, phone_number } = userData;
+        const updates = [];
+        const values = [];
+        if (name !== undefined) {
+            updates.push('name = ?');
+            values.push(toTitleCase(name));
+        }
+        if (email !== undefined) {
+            updates.push('email = ?');
+            values.push(email);
+        }
+        if (phone_number !== undefined) {
+            updates.push('phone_number = ?');
+            values.push(phone_number);
+        }
+        if (updates.length > 0) {
+            values.push(id);
+            await pool.query(
+                `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+                values
+            );
+        }
+        return this.getUserById(id);
     }
 
     /**
@@ -42,23 +67,27 @@ class UserService {
      * @param {number} limit - Items per page
      * @returns {object} Users list with pagination info
      */
-    async getUsers(page = 1, limit = 10) {
+    async getUsers(page = 1, limit = 10, search = '', sortBy = 'created_at', sortDir = 'DESC') {
         const offset = (page - 1) * limit;
-        
+        let where = '';
+        let values = [];
+        if (search) {
+            where = 'WHERE name LIKE ?';
+            values.push(`%${search}%`);
+        }
         // Get total count
-        const [countResult] = await pool.query('SELECT COUNT(*) as total FROM users');
+        const [countResult] = await pool.query(`SELECT COUNT(*) as total FROM users ${where}`, values);
         const totalItems = countResult[0].total;
         const totalPages = Math.ceil(totalItems / limit);
-        
         // Get users
         const [rows] = await pool.query(
             `SELECT id, name, email, phone_number, balance, created_at, updated_at 
              FROM users 
-             ORDER BY created_at DESC 
+             ${where}
+             ORDER BY ${sortBy} ${sortDir} 
              LIMIT ? OFFSET ?`,
-            [limit, offset]
+            [...values, limit, offset]
         );
-        
         return {
             data: rows,
             pagination: {

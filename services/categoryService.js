@@ -5,6 +5,7 @@
 
 const { pool } = require('../database/config');
 const { ERROR_MESSAGES } = require('../utils/respons');
+const { toTitleCase } = require('../utils/capitalize');
 
 class CategoryService {
     /**
@@ -14,7 +15,8 @@ class CategoryService {
      */
     async createCategory(categoryData) {
         const { name, parent_id, description, is_active = true } = categoryData;
-        
+        // Pastikan kapitalisasi nama kategori
+        const fixedName = toTitleCase(name);
         // Validate parent exists if provided
         if (parent_id) {
             const [parent] = await pool.query(
@@ -27,14 +29,41 @@ class CategoryService {
                 throw error;
             }
         }
-        
         const [result] = await pool.query(
             `INSERT INTO categories (name, parent_id, description, is_active) 
              VALUES (?, ?, ?, ?)`,
-            [name, parent_id || null, description || null, is_active]
+            [fixedName, parent_id || null, description || null, is_active]
         );
-        
         return this.getCategoryById(result.insertId);
+    }
+    async updateCategory(id, categoryData) {
+        const { name, parent_id, description, is_active } = categoryData;
+        const updates = [];
+        const values = [];
+        if (name !== undefined) {
+            updates.push('name = ?');
+            values.push(toTitleCase(name));
+        }
+        if (parent_id !== undefined) {
+            updates.push('parent_id = ?');
+            values.push(parent_id);
+        }
+        if (description !== undefined) {
+            updates.push('description = ?');
+            values.push(description);
+        }
+        if (is_active !== undefined) {
+            updates.push('is_active = ?');
+            values.push(is_active);
+        }
+        if (updates.length > 0) {
+            values.push(id);
+            await pool.query(
+                `UPDATE categories SET ${updates.join(', ')} WHERE id = ?`,
+                values
+            );
+        }
+        return this.getCategoryById(id);
     }
 
     /**
@@ -43,8 +72,7 @@ class CategoryService {
      * @returns {array} Categories list
      */
     async getCategories(options = {}) {
-        const { parent_id = null, is_active = null, flat = false } = options;
-        
+        const { parent_id = null, is_active = null, flat = false, search = '', sortBy = 'c.name', sortDir = 'ASC' } = options;
         let query = `
             SELECT 
                 c.id, 
@@ -60,7 +88,6 @@ class CategoryService {
             WHERE 1=1
         `;
         const values = [];
-        
         if (parent_id !== null) {
             if (parent_id === 'null' || parent_id === 0) {
                 query += ' AND c.parent_id IS NULL';
@@ -69,21 +96,19 @@ class CategoryService {
                 values.push(parent_id);
             }
         }
-        
         if (is_active !== null) {
             query += ' AND c.is_active = ?';
             values.push(is_active === 'true' || is_active === true ? 1 : 0);
         }
-        
-        query += ' ORDER BY c.parent_id IS NULL DESC, c.parent_id, c.name';
-        
+        if (search) {
+            query += ' AND c.name LIKE ?';
+            values.push(`%${search}%`);
+        }
+        query += ` ORDER BY ${sortBy} ${sortDir}`;
         const [rows] = await pool.query(query, values);
-        
-        // Return flat list or hierarchical structure
         if (flat) {
             return rows;
         }
-        
         return this.buildCategoryTree(rows);
     }
 
