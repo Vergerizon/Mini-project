@@ -8,16 +8,32 @@ const { ERROR_MESSAGES } = require('../utils/respons');
 const { toTitleCase } = require('../utils/capitalize');
 
 class UserService {
+
+        /**
+         * Get user by email (for login)
+         * @param {string} email
+         * @returns {object|null}
+         */
+        async getUserByEmail(email) {
+            const [rows] = await pool.query(
+                'SELECT * FROM users WHERE email = ?',
+                [email]
+            );
+            return rows.length > 0 ? rows[0] : null;
+        }
     /**
      * Create new user
      * @param {object} userData - User data
      * @returns {object} Created user
      */
     async createUser(userData) {
-        const { name, email, phone_number } = userData;
-        // Pastikan kapitalisasi nama
+        const { name, email, password, phone_number, role } = userData;
+        if (!password) {
+            const error = new Error('Password wajib diisi');
+            error.status = 400;
+            throw error;
+        }
         const fixedName = toTitleCase(name);
-        // Check if email already exists
         const [existing] = await pool.query(
             'SELECT id FROM users WHERE email = ?',
             [email]
@@ -27,15 +43,22 @@ class UserService {
             error.status = 409;
             throw error;
         }
-            // Format phone number: replace leading 0 with +62
-            if (phone_number && typeof phone_number === 'string') {
-                userData.phone_number = phone_number.replace(/^0/, '+62');
-            }
-            // Create user with default balance = 0
-            const [result] = await pool.query(
-                'INSERT INTO users (name, email, phone_number, balance) VALUES (?, ?, ?, 0)',
-                [fixedName, email, userData.phone_number || null]
-            );
+        // Hash password
+        const bcrypt = require('bcryptjs');
+        const hashedPassword = await bcrypt.hash(password, 10);
+        let fixedPhone = phone_number;
+        if (phone_number && typeof phone_number === 'string') {
+            fixedPhone = phone_number.replace(/^0/, '+62');
+        }
+        const [result] = await pool.query(
+            'INSERT INTO users (name, email, password, phone_number, balance, role) VALUES (?, ?, ?, ?, 0, ?)',
+            [fixedName, email, hashedPassword, fixedPhone || null, role || 'USER']
+        );
+        // Simpan hash ke tabel hashpassword
+        await pool.query(
+            'INSERT INTO hashpassword (user_id, hash) VALUES (?, ?)',
+            [result.insertId, hashedPassword]
+        );
         return this.getUserById(result.insertId);
     }
 
@@ -106,7 +129,7 @@ class UserService {
         const totalPages = Math.ceil(totalItems / limit);
         // Get users
         const [rows] = await pool.query(
-            `SELECT id, name, email, phone_number, balance, created_at, updated_at 
+            `SELECT id, name, email, phone_number, balance, role, created_at, updated_at 
              FROM users 
              ${whereClause}
              ORDER BY ${sortBy} ${sortDir} 
@@ -131,17 +154,15 @@ class UserService {
      */
     async getUserById(id) {
         const [rows] = await pool.query(
-            `SELECT id, name, email, phone_number, balance, created_at, updated_at 
+            `SELECT id, name, email, phone_number, balance, role, created_at, updated_at 
              FROM users WHERE id = ?`,
             [id]
         );
-        
         if (rows.length === 0) {
             const error = new Error(ERROR_MESSAGES.USER_NOT_FOUND);
             error.status = 404;
             throw error;
         }
-        
         return rows[0];
     }
 
@@ -152,29 +173,21 @@ class UserService {
      * @returns {object} Updated user
      */
     async updateUser(id, userData) {
-        // Check if user exists
         await this.getUserById(id);
-        
-        const { name, email, phone_number, balance } = userData;
-        
-        // If email is being updated, check for duplicates
+        const { name, email, password, phone_number, balance, role } = userData;
         if (email) {
             const [existing] = await pool.query(
                 'SELECT id FROM users WHERE email = ? AND id != ?',
                 [email, id]
             );
-            
             if (existing.length > 0) {
                 const error = new Error(ERROR_MESSAGES.USER_ALREADY_EXISTS);
                 error.status = 409;
                 throw error;
             }
         }
-        
-        // Build dynamic update query
         const updates = [];
         const values = [];
-        
         if (name !== undefined) {
             updates.push('name = ?');
             values.push(name);
@@ -182,6 +195,17 @@ class UserService {
         if (email !== undefined) {
             updates.push('email = ?');
             values.push(email);
+        }
+        if (password !== undefined) {
+            const bcrypt = require('bcryptjs');
+            const hashedPassword = await bcrypt.hash(password, 10);
+            updates.push('password = ?');
+            values.push(hashedPassword);
+            // Simpan hash ke tabel hashpassword
+            await pool.query(
+                'INSERT INTO hashpassword (user_id, hash) VALUES (?, ?)',
+                [id, hashedPassword]
+            );
         }
         if (phone_number !== undefined) {
             updates.push('phone_number = ?');
@@ -191,7 +215,10 @@ class UserService {
             updates.push('balance = ?');
             values.push(balance);
         }
-        
+        if (role !== undefined) {
+            updates.push('role = ?');
+            values.push(role);
+        }
         if (updates.length > 0) {
             values.push(id);
             await pool.query(
@@ -199,7 +226,6 @@ class UserService {
                 values
             );
         }
-        
         return this.getUserById(id);
     }
 

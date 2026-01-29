@@ -14,6 +14,28 @@ const {
 } = require('../utils/respons');
 
 class UserController {
+
+        /**
+         * Set user role (admin only)
+         * PATCH /api/users/:id/role
+         */
+        async setUserRole(req, res) {
+            try {
+                const { role } = req.body;
+                if (!role || !['USER', 'ADMIN'].includes(role)) {
+                    return errorResponse(res, 'Role tidak valid', 400);
+                }
+                const user = await userService.updateUser(parseInt(req.params.id), { role });
+                return successResponse(res, user, 'Role user berhasil diubah');
+            } catch (error) {
+                return errorResponse(
+                    res,
+                    error && error.message ? error.message : 'Terjadi kesalahan',
+                    error && error.status ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                    error
+                );
+            }
+        }
     /**
      * Create new user
      * POST /api/users

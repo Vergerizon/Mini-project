@@ -1,4 +1,29 @@
 -- =============================================
+-- TABLE: hashpassword
+-- Menyimpan riwayat hash password user (opsional, untuk audit/history)
+-- =============================================
+CREATE TABLE hashpassword (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_hashpassword_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_hashpassword_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- =============================================
+-- TABLE: hashpassword
+-- Menyimpan riwayat hash password user (opsional, untuk audit/history)
+-- =============================================
+CREATE TABLE hashpassword (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_hashpassword_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_hashpassword_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- =============================================
 -- PPOB (Payment Point Online Bank) Database Schema
 -- DigiWallet - Complete Database Design
 -- =============================================
@@ -9,16 +34,14 @@ DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS users;
 
--- =============================================
--- TABLE: users
--- Menyimpan data pengguna sistem
--- =============================================
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
+    hash VARCHAR(255) NOT NULL,
     phone_number VARCHAR(15) NULL,
     balance DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    role ENUM('USER', 'ADMIN') NOT NULL DEFAULT 'USER',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
@@ -28,9 +51,20 @@ CREATE TABLE users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================
--- TABLE: categories
--- Menyimpan kategori produk dengan struktur hierarki
+-- TABLE: sessions
+-- Menyimpan data sesi login user
 -- =============================================
+CREATE TABLE sessions (
+    session_id CHAR(36) PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expired_at TIMESTAMP NOT NULL,
+    
+    CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_sessions_user (user_id),
+    INDEX idx_sessions_expired (expired_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE categories (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
@@ -246,3 +280,6 @@ LEFT JOIN categories p ON c.parent_id = p.id;
 -- Ubah definisi tabel transactions:
 ALTER TABLE transactions 
 MODIFY status ENUM('PENDING', 'SUCCESS', 'FAILED', 'REFUNDED') DEFAULT 'PENDING';
+
+ALTER TABLE users ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN role ENUM('USER', 'ADMIN') NOT NULL DEFAULT 'USER';

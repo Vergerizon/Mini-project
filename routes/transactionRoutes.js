@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const transactionController = require('../controllers/transactionController');
 const { idempotencyMiddleware } = require('../middleware/idempotency');
+const { authMiddleware } = require('../middleware/auth');
 const { 
     createTransactionValidation, 
     getTransactionValidation,
@@ -19,7 +20,15 @@ const {
  * @access  Public
  * @header  X-Idempotency-Key (optional) - Untuk mencegah double submit
  */
+// Only USER can create transaction (not ADMIN)
 router.post('/', 
+    authMiddleware,
+    (req, res, next) => {
+        if (req.user.role !== 'USER') {
+            return res.status(403).json({ message: 'Forbidden: Only USER can create transaction' });
+        }
+        next();
+    },
     idempotencyMiddleware, 
     createTransactionValidation, 
     transactionController.createTransaction
@@ -30,7 +39,13 @@ router.post('/',
  * @desc    Get all transactions with pagination and filters
  * @access  Public
  */
-router.get('/', listTransactionsValidation, transactionController.getTransactions);
+// Only admin can get all transactions
+router.get('/', authMiddleware, (req, res, next) => {
+    if (req.user.role !== 'ADMIN') {
+        return res.status(403).json({ message: 'Forbidden: Admin only' });
+    }
+    next();
+}, listTransactionsValidation, transactionController.getTransactions);
 
 /**
  * @route   GET /api/transactions/reference/:reference
@@ -44,7 +59,13 @@ router.get('/reference/:reference', transactionController.getTransactionByRefere
  * @desc    Get transactions by user
  * @access  Public
  */
-router.get('/user/:userId', listTransactionsValidation, transactionController.getTransactionsByUser);
+// User can get their own transactions, admin can get any
+router.get('/user/:userId', authMiddleware, listTransactionsValidation, (req, res, next) => {
+    if (req.user.role !== 'ADMIN' && req.user.id !== parseInt(req.params.userId)) {
+        return res.status(403).json({ message: 'Forbidden: Can only access own transactions' });
+    }
+    next();
+}, transactionController.getTransactionsByUser);
 
 /**
  * @route   GET /api/transactions/:id
