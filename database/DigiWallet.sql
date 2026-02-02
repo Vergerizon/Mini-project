@@ -102,11 +102,16 @@ CREATE TABLE products (
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) 
         REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE,
     
+    -- UNIQUE constraint untuk nama produk (opsional, tapi lebih baik untuk data integrity)
+    UNIQUE INDEX idx_products_name_unique (name),
+    
     -- Index untuk optimasi query
     INDEX idx_products_category (category_id),
     INDEX idx_products_type (type),
     INDEX idx_products_active (is_active),
-    INDEX idx_products_price (price)
+    INDEX idx_products_price (price),
+    INDEX idx_products_created (created_at),
+    FULLTEXT INDEX idx_products_search (name, description)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================
@@ -268,14 +273,6 @@ SELECT
 FROM categories c
 LEFT JOIN categories p ON c.parent_id = p.id;
 
--- Query: Recursive category path (untuk mendapatkan full path category)
--- Contoh penggunaan:
--- WITH RECURSIVE category_path (id, name, path) AS (
---     SELECT id, name, name as path FROM categories WHERE parent_id IS NULL
---     UNION ALL
---     SELECT c.id, c.name, CONCAT(cp.path, ' > ', c.name)
---     FROM category_path AS cp JOIN categories AS c ON cp.id = c.parent_id
--- ) SELECT * FROM category_path;
 
 -- Ubah definisi tabel transactions:
 ALTER TABLE transactions 
@@ -283,3 +280,8 @@ MODIFY status ENUM('PENDING', 'SUCCESS', 'FAILED', 'REFUNDED') DEFAULT 'PENDING'
 
 ALTER TABLE users ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN role ENUM('USER', 'ADMIN') NOT NULL DEFAULT 'USER';
+
+-- =============================================
+-- TABLE: rawtext
+-- Menyimpan receipt/struk dalam format BLOB dan TEXT
+-- =============================================

@@ -68,6 +68,11 @@ class TransactionController {
             
             const result = await transactionService.getTransactions(options);
             
+            // Filter data for USER role
+            if (req.user && req.user.role === 'USER') {
+                result.data = this.filterTransactionListFields(result.data);
+            }
+            
             return paginatedResponse(
                 res, 
                 result.data, 
@@ -139,6 +144,11 @@ class TransactionController {
                 options
             );
             
+            // Filter data for USER role
+            if (req.user && req.user.role === 'USER') {
+                result.data = this.filterTransactionListFields(result.data);
+            }
+            
             return paginatedResponse(
                 res, 
                 result.data, 
@@ -207,6 +217,38 @@ class TransactionController {
                 error
             );
         }
+    }
+
+    /**
+     * Get receipt by transaction ID
+     * GET /api/transactions/:id/receipt
+     */
+    getReceipt = async (req, res) => {
+        try {
+            const receipt = await transactionService.getReceipt(parseInt(req.params.id));
+            return successResponse(res, receipt, 'Receipt berhasil diambil');
+        } catch (error) {
+            return errorResponse(
+                res,
+                error && error.message ? error.message : 'Terjadi kesalahan',
+                error && error.status ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                error
+            );
+        }
+    }
+
+    /**
+     * Filter transaction list to show only product name, type, purchase date, and price
+     * @param {Array} transactions - List of transactions
+     * @returns {Array} Filtered transactions
+     */
+    filterTransactionListFields = (transactions) => {
+        return transactions.map(transaction => ({
+            product_name: transaction.product_name,
+            product_type: transaction.product_type,
+            purchase_date: transaction.created_at,
+            amount: transaction.amount
+        }));
     }
 }
 

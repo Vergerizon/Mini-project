@@ -108,4 +108,11 @@ router.patch('/:id/complete', authMiddleware, (req, res, next) => {
  */
 router.delete('/:id', getTransactionValidation, transactionController.deleteTransaction);
 
+/**
+ * @route   GET /api/transactions/:id/receipt
+ * @desc    Get receipt for a transaction
+ * @access  Public
+ */
+router.get('/:id/receipt', authMiddleware, getTransactionValidation, transactionController.getReceipt);
+
 module.exports = router;

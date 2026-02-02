@@ -116,6 +116,7 @@ class ProductService {
              LIMIT ? OFFSET ?`,
             [...values, limit, offset]
         );
+        
         return {
             data: rows,
             pagination: {

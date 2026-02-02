@@ -90,6 +90,16 @@ class TransactionService {
                 "UPDATE transactions SET status = 'REFUNDED', notes = 'Transaksi direfund dan dana dikembalikan' WHERE id = ?",
                 [id]
             );
+            
+            // Update rawtext status
+            try {
+                await connection.query(
+                    "UPDATE rawtext SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE transaction_id = ?",
+                    [id]
+                );
+            } catch (error) {
+                console.error('Error updating rawtext status:', error);
+            }
 
             await connection.commit();
 
@@ -107,6 +117,65 @@ class TransactionService {
             connection.release();
         }
     }
+    /**
+     * Generate receipt text format
+     */
+    generateReceiptText(transaction, product, user, subtotal, tax) {
+        const lines = [
+            '================================',
+            '       DIGIWALLET RECEIPT',
+            '================================',
+            '',
+            `User: ${user.name}`,
+            `Email: ${user.email}`,
+            '',
+            `Product: ${product.name}`,
+            `Type: ${product.type}`,
+            `Customer No: ${transaction.customer_number}`,
+            '',
+            `Reference: ${transaction.reference_number}`,
+            `Status: ${transaction.status}`,
+            '',
+            '--------------------------------',
+            'BILL DETAIL',
+            '--------------------------------',
+            `Subtotal  : Rp ${subtotal.toLocaleString('id-ID', { minimumFractionDigits: 2 })}`,
+            `Tax (11%) : Rp ${tax.toLocaleString('id-ID', { minimumFractionDigits: 2 })}`,
+            '--------------------------------',
+            `Total     : Rp ${transaction.amount.toLocaleString('id-ID', { minimumFractionDigits: 2 })}`,
+            '--------------------------------',
+            '',
+            `Date: ${new Date().toLocaleString('id-ID')}`,
+            '',
+            'Thank you for using DigiWallet',
+            '================================'
+        ];
+        return lines.join('\n');
+    }
+
+    /**
+     * Save receipt to rawtext table
+     */
+    async saveReceiptToRawtext(connection, transaction, user, product, subtotal, tax) {
+        const receiptText = this.generateReceiptText(transaction, product, user, subtotal, tax);
+        const receiptBlob = Buffer.from(receiptText, 'utf8');
+        
+        await connection.query(
+            `INSERT INTO rawtext 
+             (transaction_id, user_id, product_id, product_name, product_type, customer_number, subtotal, tax_amount, total_amount, reference_number, status, receipt_text, receipt_blob)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+             status = ?, receipt_text = ?, receipt_blob = ?, updated_at = CURRENT_TIMESTAMP`,
+            [
+                transaction.id || 0, user.id, product.id, product.name, product.type, transaction.customer_number,
+                subtotal, tax, transaction.amount, transaction.reference_number, transaction.status,
+                receiptText, receiptBlob,
+                // Update part
+                transaction.status, receiptText, receiptBlob
+            ]
+        );
+    }
+
     /**
      * Generate unique reference number
      * @returns {string} Reference number
@@ -198,7 +267,39 @@ class TransactionService {
                 [user_id, product_id, customer_number, amount, referenceNumber]
             );
             
-            // 8. Commit transaction
+            // 8. Save receipt to rawtext table
+            try {
+                const receiptText = this.generateReceiptText(
+                    { 
+                        id: result.insertId,
+                        customer_number: customer_number,
+                        amount: amount,
+                        reference_number: referenceNumber,
+                        status: 'PENDING'
+                    },
+                    product,
+                    user,
+                    subtotal,
+                    tax
+                );
+                const receiptBlob = Buffer.from(receiptText, 'utf8');
+                
+                await connection.query(
+                    `INSERT INTO rawtext 
+                     (transaction_id, user_id, product_id, product_name, product_type, customer_number, subtotal, tax_amount, total_amount, reference_number, status, receipt_text, receipt_blob)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        result.insertId, user_id, product_id, product.name, product.type, customer_number,
+                        subtotal, tax, amount, referenceNumber, 'PENDING',
+                        receiptText, receiptBlob
+                    ]
+                );
+            } catch (error) {
+                console.error('Error saving receipt to rawtext:', error);
+                // Continue even if rawtext save fails
+            }
+            
+            // 9. Commit transaction
             await connection.commit();
             
             // Get the created transaction
@@ -303,7 +404,8 @@ class TransactionService {
         return {
             ...filteredTransaction,
             subtotal: subtotal.toFixed(2),
-            tax: tax.toFixed(2)
+            tax: tax.toFixed(2),
+            receipt: this.formatReceipt(transaction)
         };
     }
 
@@ -355,7 +457,8 @@ class TransactionService {
         return {
             ...filteredTransaction,
             subtotal: subtotal.toFixed(2),
-            tax: tax.toFixed(2)
+            tax: tax.toFixed(2),
+            receipt: this.formatReceipt(transaction)
         };
     }
 
@@ -522,6 +625,16 @@ class TransactionService {
                 [id]
             );
             
+            // Update rawtext status
+            try {
+                await connection.query(
+                    "UPDATE rawtext SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE transaction_id = ?",
+                    [id]
+                );
+            } catch (error) {
+                console.error('Error updating rawtext status:', error);
+            }
+            
             await connection.commit();
             
             const updatedTransaction = await this.getTransactionById(id);
@@ -592,6 +705,16 @@ class TransactionService {
                 [id]
             );
             
+            // Update rawtext status
+            try {
+                await connection.query(
+                    "UPDATE rawtext SET status = 'SUCCESS', updated_at = CURRENT_TIMESTAMP WHERE transaction_id = ?",
+                    [id]
+                );
+            } catch (error) {
+                console.error('Error updating rawtext status:', error);
+            }
+            
             await connection.commit();
             
             return await this.getTransactionById(id);
@@ -602,6 +725,84 @@ class TransactionService {
         } finally {
             connection.release();
         }
+    }
+
+    /**
+     * Format transaction data as receipt (struk belanja)
+     * @param {object} transaction - Transaction data
+     * @returns {array} Formatted receipt as array of lines
+     */
+    formatReceipt(transaction) {
+        // Format date and time
+        const date = new Date(transaction.created_at);
+        const formattedDate = date.toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        const formattedTime = date.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        // Calculate amounts
+        const amount = parseFloat(transaction.amount);
+        const subtotal = amount / (1 + TAX_RATE);
+        const tax = amount - subtotal;
+
+        // Format currency
+        const formatRupiah = (value) => `Rp ${parseFloat(value).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // Build receipt as array of lines
+        const receipt = [
+            'DIGIWALLET PPOB - Struk Transaksi',
+            '',
+            `Tanggal         : ${formattedDate}`,
+            `Waktu           : ${formattedTime}`,
+            `No. Referensi   : ${transaction.reference_number}`,
+            `Status          : ${transaction.status}`,
+            '',
+            `Pelanggan       : ${transaction.user_name}`,
+            '',
+            `Produk          : ${transaction.product_name}`,
+            `Kategori        : ${transaction.product_type}`,
+            `No. Pelanggan   : ${transaction.customer_number}`,
+            '',
+            `Subtotal        : ${formatRupiah(subtotal)}`,
+            `Pajak (11%)     : ${formatRupiah(tax)}`,
+            `Total Bayar     : ${formatRupiah(amount)}`,
+            '',
+            'Terima kasih telah menggunakan DigiWallet'
+        ];
+
+        if (transaction.notes) {
+            receipt.push(`Catatan: ${transaction.notes}`);
+        }
+
+        return receipt;
+    }
+
+    /**
+     * Get receipt from rawtext table
+     * @param {number} transactionId - Transaction ID
+     * @returns {object} Receipt data
+     */
+    async getReceipt(transactionId) {
+        const [rows] = await pool.query(
+            `SELECT id, transaction_id, user_id, product_id, product_name, product_type, customer_number, 
+                    subtotal, tax_amount, total_amount, reference_number, status, receipt_text, created_at, updated_at
+             FROM rawtext WHERE transaction_id = ?`,
+            [transactionId]
+        );
+
+        if (rows.length === 0) {
+            const error = new Error('Receipt tidak ditemukan');
+            error.status = 404;
+            throw error;
+        }
+
+        return rows[0];
     }
 }
 
