@@ -367,7 +367,7 @@ class TransactionService {
     async getTransactions(options = {}) {
         const { 
             page = 1, 
-            limit = 10, 
+            limit = 5, 
             user_id = null,
             product_id = null,
             status = null,
