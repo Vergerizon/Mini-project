@@ -13,6 +13,7 @@ const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
 const { testConnection } = require('./database/config');
 const { notFoundHandler, globalErrorHandler } = require('./middleware/errorHandler');
+const { loggingMiddleware } = require('./middleware/logging');
 
 // Initialize Express app
 const app = express();
@@ -55,6 +56,10 @@ const limiter = rateLimit({
 
 // Apply rate limiting to API routes
 app.use('/api', limiter);
+
+// Logging middleware untuk POST, PUT, PATCH, DELETE
+// HARUS ditempatkan SEBELUM routes agar bisa intercept response
+app.use(loggingMiddleware);
 
 // =============================================
 // API ROUTES
