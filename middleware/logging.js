@@ -41,65 +41,21 @@ const loggingMiddleware = (req, res, next) => {
     res.on('finish', async () => {
         console.log(`[LOGGING] Response finished for ${req.method} ${req.originalUrl || req.url}, status: ${res.statusCode}`);
         try {
-            // Kumpulkan pihak-pihak yang terlibat
-            let involvedParties = {
-                user_id: req.user?.id || null,           // User yang melakukan operasi
-                user_email: req.user?.email || null,     // Email user
-                user_role: req.user?.role || null,       // Role user
-                ip_address: req.ip || req.connection?.remoteAddress || null,
-                user_agent: req.get('User-Agent') || null
-            };
-
-            // Jika ada user_id tapi tidak ada email, query dari database
-            if (involvedParties.user_id && !involvedParties.user_email) {
-                try {
-                    const [userRows] = await pool.execute(
-                        'SELECT email FROM users WHERE id = ?',
-                        [involvedParties.user_id]
-                    );
-                    if (userRows.length > 0) {
-                        involvedParties.user_email = userRows[0].email;
-                    }
-                } catch (dbError) {
-                    // Jika query gagal, lanjutkan dengan email null
-                    console.error('Error fetching user email:', dbError.message);
-                }
-            }
-
-            // Tambahkan target_id jika ada di params
-            if (req.params.id) {
-                involvedParties.target_id = req.params.id;
-            }
-            if (req.params.userId) {
-                involvedParties.target_user_id = req.params.userId;
-            }
-            if (req.params.productId) {
-                involvedParties.target_product_id = req.params.productId;
-            }
-            if (req.params.categoryId) {
-                involvedParties.target_category_id = req.params.categoryId;
-            }
-            if (req.params.transactionId) {
-                involvedParties.target_transaction_id = req.params.transactionId;
-            }
-
             // Siapkan data untuk insert
             const logData = {
-                involved_parties: JSON.stringify(involvedParties),
                 operation_type: req.method,
                 http_status_code: res.statusCode,
-                response: truncateResponse(responseBody),
+                response: removeSensitiveData(responseBody),
                 endpoint: req.originalUrl || req.url
             };
 
             // Insert ke database
             const query = `
-                INSERT INTO logs (involved_parties, operation_type, http_status_code, response, endpoint)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO logs (operation_type, http_status_code, response, endpoint)
+                VALUES (?, ?, ?, ?)
             `;
 
             await pool.execute(query, [
-                logData.involved_parties,
                 logData.operation_type,
                 logData.http_status_code,
                 logData.response,
@@ -115,6 +71,37 @@ const loggingMiddleware = (req, res, next) => {
     });
 
     next();
+};
+
+/**
+ * Remove sensitive data from response (tokens, passwords, etc.)
+ * @param {string} response - Response body
+ * @returns {string} - Response with sensitive data removed
+ */
+const removeSensitiveData = (response) => {
+    if (!response) return null;
+    
+    try {
+        const responseStr = typeof response === 'string' ? response : JSON.stringify(response);
+        let sanitized = responseStr;
+        
+        // Remove token values
+        sanitized = sanitized.replace(/"token"\s*:\s*"[^"]*"/gi, '"token":"***REDACTED***');
+        sanitized = sanitized.replace(/"token"\s*:\s*'[^']*'/gi, '"token":"***REDACTED***');
+        
+        // Remove password values
+        sanitized = sanitized.replace(/"password"\s*:\s*"[^"]*"/gi, '"password":"***REDACTED***');
+        sanitized = sanitized.replace(/"password"\s*:\s*'[^']*'/gi, '"password":"***REDACTED***');
+        
+        // Remove Authorization header
+        sanitized = sanitized.replace(/"authorization"\s*:\s*"[^"]*"/gi, '"authorization":"***REDACTED***');
+        sanitized = sanitized.replace(/"authorization"\s*:\s*'[^']*'/gi, '"authorization":"***REDACTED***');
+        
+        return truncateResponse(sanitized);
+    } catch (error) {
+        console.error('Error removing sensitive data:', error.message);
+        return truncateResponse(response);
+    }
 };
 
 /**

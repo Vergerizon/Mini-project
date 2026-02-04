@@ -17,3 +17,5 @@ CREATE TABLE IF NOT EXISTS logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 USE digiwallet; -- Ganti dengan nama database Anda
+
+ALTER TABLE logs DROP COLUMN involved_parties;

@@ -32,9 +32,14 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key']
 }));
 
-// Request logging
+// Request logging - custom format to exclude Authorization header
 if (process.env.NODE_ENV !== 'test') {
-    app.use(morgan('combined'));
+    // Custom morgan format that excludes Authorization header
+    morgan.token('auth-header', (req) => {
+        return req.headers.authorization ? '***REDACTED***' : 'none';
+    });
+    
+    app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"'));
 }
 
 // Body parsing
