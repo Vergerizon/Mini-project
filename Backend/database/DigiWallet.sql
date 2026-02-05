@@ -97,8 +97,6 @@ CREATE TABLE products (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    -- Foreign Key untuk category
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) 
         REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE,
     

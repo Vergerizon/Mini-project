@@ -129,7 +129,7 @@ const LogService = {
     /**
      * Ambil semua logs dengan pagination
      */
-    async getAllLogs(page = 1, limit = 20, filters = {}) {
+    async getAllLogs(page = 1, limit = 10, filters = {}) {
         try {
             let query = 'SELECT * FROM logs WHERE 1=1';
             const params = [];
@@ -200,7 +200,7 @@ const LogService = {
     /**
      * Ambil logs berdasarkan user ID
      */
-    async getLogsByUserId(userId, page = 1, limit = 20) {
+    async getLogsByUserId(userId, page = 1, limit = 10) {
         try {
             const query = `
                 SELECT * FROM logs 
