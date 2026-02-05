@@ -22,3 +22,45 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Node
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+web-build/
+.out/
+.esbuild/
+
+# Expo
+.expo/
+.expo-shared/
+.expo-local/
+
+# React Native / Android / iOS
+android/
+ios/
+local.properties
+*.keystore
+*.jks
+
+# Metro/Bundler
+metro-cache/
+
+# Environment
+.env
+.env.*
+
+# Misc
+coverage/
+coverage-final.json
+debug.log
+
+# Optional lockfiles (uncomment if you track them elsewhere)
+# package-lock.json
+# yarn.lock
+
+# Ignore the .gitignore file itself (keep local, untracked)
+.gitignore
