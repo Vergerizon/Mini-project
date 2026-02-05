@@ -1,11 +1,24 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-// Adjust for your environment:
+// Automatically select the correct URL based on platform:
+// - Web: localhost
 // - Android emulator: 10.0.2.2
 // - iOS simulator: localhost
-// - Physical device: your PC's LAN IP
-const BASE_URL = 'http://10.0.2.2:3000';
+// - Physical device: use your PC's LAN IP (e.g., 192.168.x.x)
+const getBaseUrl = () => {
+  if (Platform.OS === 'web') {
+    return 'http://localhost:3000';
+  }
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:3000';
+  }
+  // iOS or other
+  return 'http://localhost:3000';
+};
+
+const BASE_URL = getBaseUrl();
 
 const api = axios.create({
   baseURL: BASE_URL,
