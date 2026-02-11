@@ -29,7 +29,8 @@ app.use(helmet());
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key'],
+    exposedHeaders: ['Authorization']
 }));
 
 // Request logging - custom format to exclude Authorization header

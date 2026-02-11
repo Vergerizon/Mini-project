@@ -26,10 +26,14 @@ class AuthController {
         // Set token di header Authorization
         res.set('Authorization', 'Bearer ' + session.token);
         
-        // Hide user_id from response
+        // Return user data and session info (without sensitive data)
+        const { password: _, ...userWithoutPassword } = user;
         const { user_id, ...sessionWithoutUserId } = session;
         
-        return res.json({ session: sessionWithoutUserId });
+        return res.json({ 
+            user: userWithoutPassword,
+            session: sessionWithoutUserId 
+        });
     }
 
     /**
