@@ -10,7 +10,6 @@ async function migrate() {
     const [users] = await pool.query("SELECT id FROM users WHERE password IS NULL OR password = ''");
     for (const user of users) {
         await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashed, user.id]);
-        await pool.query('INSERT INTO hashpassword (user_id, hash) VALUES (?, ?)', [user.id, hashed]);
         console.log(`User ID ${user.id} updated with default password.`);
     }
     if (users.length === 0) {

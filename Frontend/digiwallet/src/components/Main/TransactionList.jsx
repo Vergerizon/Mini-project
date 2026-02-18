@@ -1,4 +1,5 @@
 import { MAIN_TEXT } from "../../constants";
+import formatRupiah from "../../utils/currency";
 
 export default function TransactionList({ transactions }) {
   if (!transactions || transactions.length === 0) {
@@ -42,7 +43,7 @@ export default function TransactionList({ transactions }) {
                 tx.type === "credit" ? "text-green-600" : "text-gray-900"
               }`}
             >
-              {tx.type === "credit" ? "+" : "-"}${Math.abs(tx.amount).toFixed(2)}
+              {tx.type === "credit" ? "+" : "-"}{formatRupiah(Math.abs(tx.amount))}
             </span>
           </div>
         ))}

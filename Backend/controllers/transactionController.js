@@ -32,7 +32,12 @@ class TransactionController {
      */
     createTransaction = async (req, res) => {
         try {
-            const transaction = await transactionService.createTransaction(req.body);
+            // Ensure server-side user identity is used when client doesn't provide user_id
+            const payload = { ...req.body };
+            if (!payload.user_id && req.user && req.user.id) {
+                payload.user_id = req.user.id;
+            }
+            const transaction = await transactionService.createTransaction(payload);
             return successResponse(
                 res, 
                 transaction, 

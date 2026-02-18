@@ -26,7 +26,8 @@ class UserController {
                     return errorResponse(res, 'Role tidak valid', 400);
                 }
                 const user = await userService.updateUser(parseInt(req.params.id), { role });
-                return successResponse(res, user, 'Role user berhasil diubah');
+                const { id, ...sanitized } = user;
+                return successResponse(res, sanitized, 'Role user berhasil diubah');
             } catch (error) {
                 return errorResponse(
                     res,
@@ -43,9 +44,10 @@ class UserController {
     async createUser(req, res) {
         try {
             const user = await userService.createUser(req.body);
+            const { id, ...sanitized } = user;
             return successResponse(
                 res, 
-                user, 
+                sanitized, 
                 SUCCESS_MESSAGES.USER_CREATED, 
                 HTTP_STATUS.CREATED
             );
@@ -81,9 +83,10 @@ class UserController {
                 balance_max: req.query.balance_max
             };
             const result = await userService.getUsers(page, limit, search, sortBy, sortDir, filters);
+            const sanitizedData = result.data.map(({ id, ...rest }) => rest);
             return paginatedResponse(
                 res, 
-                result.data, 
+                sanitizedData, 
                 result.pagination, 
                 SUCCESS_MESSAGES.USERS_FETCHED
             );
@@ -105,13 +108,33 @@ class UserController {
     async getUserById(req, res) {
         try {
             const user = await userService.getUserById(parseInt(req.params.id));
-            return successResponse(res, user, SUCCESS_MESSAGES.USER_FETCHED);
+            const { id, ...sanitized } = user;
+            return successResponse(res, sanitized, SUCCESS_MESSAGES.USER_FETCHED);
         } catch (error) {
             return errorResponse(
                 res, 
                 error && error.message ? error.message : 'Terjadi kesalahan',
                 error && error.status ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR,
                 error 
+            );
+        }
+    }
+
+    /**
+     * Get current logged-in user's profile
+     * GET /api/users/me
+     */
+    async getMyProfile(req, res) {
+        try {
+            const user = await userService.getUserById(req.user.id);
+            const { id, ...sanitized } = user;
+            return successResponse(res, sanitized, SUCCESS_MESSAGES.USER_FETCHED);
+        } catch (error) {
+            return errorResponse(
+                res,
+                error && error.message ? error.message : 'Terjadi kesalahan',
+                error && error.status ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                error
             );
         }
     }
@@ -126,7 +149,8 @@ class UserController {
                 parseInt(req.params.id), 
                 req.body
             );
-            return successResponse(res, user, SUCCESS_MESSAGES.USER_UPDATED);
+            const { id, ...sanitized } = user;
+            return successResponse(res, sanitized, SUCCESS_MESSAGES.USER_UPDATED);
         } catch (error) {
             return errorResponse(
                 res, 
@@ -177,10 +201,38 @@ class UserController {
                 parseInt(req.params.id), 
                 parseFloat(amount)
             );
-            return successResponse(res, user, 'Top up berhasil');
+            const { id, ...sanitized } = user;
+            return successResponse(res, sanitized, 'Top up berhasil');
         } catch (error) {
             return errorResponse(
                 res, 
+                error && error.message ? error.message : 'Terjadi kesalahan',
+                error && error.status ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR,
+                error
+            );
+        }
+    }
+
+    /**
+     * Top up current authenticated user's balance
+     * POST /api/users/me/topup
+     */
+    async topUpMe(req, res) {
+        try {
+            const { amount } = req.body;
+            if (!amount || amount <= 0) {
+                return errorResponse(
+                    res,
+                    'Jumlah top up harus lebih dari 0',
+                    HTTP_STATUS.BAD_REQUEST
+                );
+            }
+            const user = await userService.addBalance(req.user.id, parseFloat(amount));
+            const { id, ...sanitized } = user;
+            return successResponse(res, sanitized, 'Top up berhasil');
+        } catch (error) {
+            return errorResponse(
+                res,
                 error && error.message ? error.message : 'Terjadi kesalahan',
                 error && error.status ? error.status : HTTP_STATUS.INTERNAL_SERVER_ERROR,
                 error

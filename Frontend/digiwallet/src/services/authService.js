@@ -25,6 +25,15 @@ export const loginUser = async (email, password) => {
   return response.data;
 };
 
+/**
+ * Register a new user.
+ * POST /api/users (public, no auth required)
+ */
+export const registerUser = async (userData) => {
+  const response = await api.post(API_ENDPOINTS.REGISTER, userData);
+  return response.data;
+};
+
 export const logoutUser = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
@@ -34,4 +43,11 @@ export const getToken = () => localStorage.getItem("token");
 export const getUser = () => {
   const user = localStorage.getItem("user");
   return user ? JSON.parse(user) : null;
+};
+
+/** Merge partial updates into the stored user object */
+export const updateLocalUser = (partialUser) => {
+  const existing = getUser();
+  if (!existing) return;
+  localStorage.setItem("user", JSON.stringify({ ...existing, ...partialUser }));
 };

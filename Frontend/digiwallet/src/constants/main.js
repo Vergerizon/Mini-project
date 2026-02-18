@@ -17,13 +17,14 @@ export const NAV_ITEMS = [
   { id: "transactions", label: "Transactions", icon: "📋" },
   { id: "cards", label: "Cards", icon: "💳" },
   { id: "analytics", label: "Analytics", icon: "📈" },
+  { id: "profile", label: "Profile", icon: "👤" },
   { id: "settings", label: "Settings", icon: "⚙️" },
 ];
 
 export const QUICK_ACTIONS = [
   { id: "send", label: "Send Money", icon: "↗", bgColor: "#d4f53c" },
   { id: "receive", label: "Receive", icon: "↙", bgColor: "#f3e8ff" },
-  { id: "topup", label: "Top Up", icon: "➕", bgColor: "#ecfdf5" },
+  { id: "topup", label: "Top Up Saldo", icon: "💰", bgColor: "#ecfdf5" },
   { id: "pay", label: "Pay Bills", icon: "📄", bgColor: "#fef3c7" },
 ];
 
@@ -58,7 +59,7 @@ export const MOCK_CARDS = [
 ];
 
 export const MOCK_STATS = [
-  { label: "Income", value: "$5,350.00", icon: "📥", bgColor: "#d4f53c40", change: 12.5 },
-  { label: "Expenses", value: "$1,225.79", icon: "📤", bgColor: "#f3e8ff", change: -3.2 },
-  { label: "Savings", value: "$4,124.21", icon: "🏦", bgColor: "#ecfdf5", change: 8.1 },
+  { label: "Income", value: 5350.0, icon: "📥", bgColor: "#d4f53c40", change: 12.5 },
+  { label: "Expenses", value: 1225.79, icon: "📤", bgColor: "#f3e8ff", change: -3.2 },
+  { label: "Savings", value: 4124.21, icon: "🏦", bgColor: "#ecfdf5", change: 8.1 },
 ];

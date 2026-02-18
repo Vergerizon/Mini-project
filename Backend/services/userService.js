@@ -54,11 +54,7 @@ class UserService {
             'INSERT INTO users (name, email, password, phone_number, balance, role) VALUES (?, ?, ?, ?, 0, ?)',
             [fixedName, email, hashedPassword, fixedPhone || null, role || 'USER']
         );
-        // Simpan hash ke tabel hashpassword
-        await pool.query(
-            'INSERT INTO hashpassword (user_id, hash) VALUES (?, ?)',
-            [result.insertId, hashedPassword]
-        );
+        
         return this.getUserById(result.insertId);
     }
 
@@ -171,11 +167,7 @@ class UserService {
             const hashedPassword = await bcrypt.hash(password, 10);
             updates.push('password = ?');
             values.push(hashedPassword);
-            // Simpan hash ke tabel hashpassword
-            await pool.query(
-                'INSERT INTO hashpassword (user_id, hash) VALUES (?, ?)',
-                [id, hashedPassword]
-            );
+            
         }
         if (phone_number !== undefined) {
             updates.push('phone_number = ?');

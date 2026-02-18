@@ -1,4 +1,5 @@
 import { MAIN_TEXT } from "../../constants";
+import formatRupiah from "../../utils/currency";
 
 export default function StatsGrid({ stats }) {
   return (
@@ -17,7 +18,7 @@ export default function StatsGrid({ stats }) {
             </div>
             <span className="text-xs text-gray-500">{stat.label}</span>
           </div>
-          <p className="text-xl font-bold text-gray-900">{stat.value}</p>
+          <p className="text-xl font-bold text-gray-900">{typeof stat.value === 'number' ? formatRupiah(stat.value) : stat.value}</p>
           {stat.change && (
             <span
               className={`text-xs font-medium ${

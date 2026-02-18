@@ -1,10 +1,15 @@
 import { getUser } from "../../services/authService";
 import { MAIN_TEXT, NAV_ITEMS } from "../../constants";
 
+// Users only see these tabs
+const USER_TABS = ["dashboard", "transactions", "profile"];
+
 export default function Sidebar({ activeTab, onTabChange, onLogout }) {
   const user = getUser();
   const displayName = user?.name || user?.email?.split("@")[0] || "User";
   const initials = displayName.charAt(0).toUpperCase();
+  const isUser = user?.role === "USER";
+  const navItems = isUser ? NAV_ITEMS.filter((i) => USER_TABS.includes(i.id)) : NAV_ITEMS;
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col min-h-screen">
@@ -21,7 +26,7 @@ export default function Sidebar({ activeTab, onTabChange, onLogout }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 mt-2">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}

@@ -27,7 +27,7 @@ class AuthController {
         res.set('Authorization', 'Bearer ' + session.token);
         
         // Return user data and session info (without sensitive data)
-        const { password: _, ...userWithoutPassword } = user;
+        const { id, password: _, ...userWithoutPassword } = user;
         const { user_id, ...sessionWithoutUserId } = session;
         
         return res.json({ 

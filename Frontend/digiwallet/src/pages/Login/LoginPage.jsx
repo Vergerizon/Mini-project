@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { loginUser } from "../../services/authService";
 import { LOGIN_TEXT, LOGIN_FIELDS, LOGIN_MESSAGES } from "../../constants";
 import { InputField, LoginButton, Illustration, Footer } from "../../components/Login";
@@ -36,7 +36,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 min-h-[600px]">
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-2 min-h-150">
         {/* Left — Form */}
         <div className="flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-12">
           {/* Logo */}
@@ -96,9 +96,9 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-gray-500 mt-8">
             {LOGIN_TEXT.NO_ACCOUNT}{" "}
-            <a href="#" className="font-semibold text-purple-600 hover:text-purple-700">
+            <Link to="/register" className="font-semibold text-purple-600 hover:text-purple-700">
               {LOGIN_TEXT.SIGN_UP}
-            </a>
+            </Link>
           </p>
 
           <Footer />

@@ -43,6 +43,15 @@ router.get('/', authMiddleware, (req, res, next) => {
 }, listUsersValidation, userController.getUsers);
 
 /**
+ * @route   GET /api/users/me
+ * @desc    Get current logged-in user's profile
+ * @access  Authenticated users
+ */
+router.get('/me', authMiddleware, (req, res, next) => {
+    next();
+}, userController.getMyProfile);
+
+/**
  * @route   GET /api/users/:id
  * @desc    Get user by ID
  * @access  Public
@@ -87,14 +96,24 @@ router.delete('/:id', authMiddleware, (req, res, next) => {
 }, getUserValidation, userController.deleteUser);
 
 /**
+ * @route   POST /api/users/me/topup
+ * @desc    Top up current user's balance
+ * @access  Authenticated user
+ */
+router.post('/me/topup', authMiddleware, (req, res, next) => {
+    // Any authenticated USER can top up their own account
+    next();
+}, userController.topUpMe);
+
+/**
  * @route   POST /api/users/:id/topup
  * @desc    Add balance to user (Top Up)
- * @access  Public
+ * @access  USER (own) or ADMIN (any)
  */
-// Only admin can top up user balance
 router.post('/:id/topup', authMiddleware, (req, res, next) => {
-    if (req.user.role !== 'ADMIN') {
-        return res.status(403).json({ message: 'Tidak memiliki wewenang: Hanya admin yang dapat top up saldo' });
+    const isSelf = req.user.id === parseInt(req.params.id);
+    if (req.user.role !== 'ADMIN' && !isSelf) {
+        return res.status(403).json({ message: 'Tidak memiliki wewenang: Hanya dapat top up saldo sendiri' });
     }
     next();
 }, getUserValidation, userController.topUpBalance);

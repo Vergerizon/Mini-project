@@ -1,9 +1,10 @@
 import { QUICK_ACTIONS } from "../../constants";
 
-export default function QuickActions({ onAction }) {
+export default function QuickActions({ onAction, actions }) {
+  const items = actions || QUICK_ACTIONS;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {QUICK_ACTIONS.map((action) => (
+      {items.map((action) => (
         <button
           key={action.id}
           onClick={() => onAction(action.id)}

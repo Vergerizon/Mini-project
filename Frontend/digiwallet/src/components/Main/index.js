@@ -5,3 +5,6 @@ export { default as TransactionList } from "./TransactionList";
 export { default as WalletCard } from "./WalletCard";
 export { default as StatsGrid } from "./StatsGrid";
 export { default as SpendingChart } from "./SpendingChart";
+export { default as TopUpModal } from "./TopUpModal";
+export { default as TopUpBalanceModal } from "./TopUpBalanceModal";
+export { default as ProductCatalog } from "./ProductCatalog";

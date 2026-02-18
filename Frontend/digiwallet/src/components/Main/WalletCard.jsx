@@ -1,7 +1,7 @@
 export default function WalletCard({ card }) {
   return (
     <div
-      className="rounded-2xl p-5 text-white relative overflow-hidden min-h-[180px] flex flex-col justify-between"
+      className="rounded-2xl p-5 text-white relative overflow-hidden min-h-45 flex flex-col justify-between"
       style={{
         background: card.gradient || "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)",
       }}

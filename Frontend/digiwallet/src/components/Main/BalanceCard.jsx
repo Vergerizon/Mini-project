@@ -1,11 +1,8 @@
 import { MAIN_TEXT } from "../../constants";
+import formatRupiah from "../../utils/currency";
 
-export default function BalanceCard({ balance, currency = "USD" }) {
-  const formattedBalance = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(balance);
+export default function BalanceCard({ balance }) {
+  const formattedBalance = formatRupiah(balance);
 
   return (
     <div className="bg-gray-900 rounded-2xl p-6 text-white relative overflow-hidden">
