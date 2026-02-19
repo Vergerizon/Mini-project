@@ -310,7 +310,7 @@ class TransactionService {
             createdTransaction.tax = tax.toFixed(2);
             createdTransaction.tax_rate = '11%';
             
-            // 9. Schedule auto-complete after 3 minutes
+            // 9. Schedule auto-complete after 1 minute
             setTimeout(async () => {
                 try {
                     // Check if transaction is still PENDING before auto-completing
@@ -330,7 +330,7 @@ class TransactionService {
                 } catch (error) {
                     console.error(`Error auto-completing transaction ${result.insertId}:`, error);
                 }
-            }, 3 * 60 * 1000); // 3 minutes
+            }, 1 * 60 * 1000); // 1 minute
             
             // Return transaction details
             return createdTransaction;

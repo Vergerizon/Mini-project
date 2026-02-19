@@ -135,6 +135,11 @@ INSERT INTO categories (name, parent_id, description, is_active) VALUES
 ('Pulsa', 1, 'Isi ulang pulsa semua operator', TRUE),
 ('Paket Data', 1, 'Paket internet semua operator', TRUE);
 
+-- Sub-sub Categories untuk Tagihan (parent_id = 5)
+INSERT INTO categories (name, parent_id, description, is_active) VALUES
+('Pulsa', 5, 'Isi ulang pulsa semua operator', TRUE),
+('Paket Data', 5, 'Paket internet semua operator', TRUE);
+
 -- Sub Categories untuk Tagihan (parent_id = 2)
 INSERT INTO categories (name, parent_id, description, is_active) VALUES
 ('Listrik PLN', 2, 'Pembayaran dan token listrik PLN', TRUE),

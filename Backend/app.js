@@ -14,6 +14,7 @@ const routes = require('./routes');
 const { testConnection } = require('./database/config');
 const { notFoundHandler, globalErrorHandler } = require('./middleware/errorHandler');
 const { loggingMiddleware } = require('./middleware/logging');
+const { startScheduler } = require('./services/schedulerService');
 
 // Initialize Express app
 const app = express();
@@ -131,6 +132,9 @@ const startServer = async () => {
             console.log(`  - Reports:      http://${HOST}:${PORT}/api/reports`);
             console.log(`  - Health:       http://${HOST}:${PORT}/api/health`);
             console.log('='.repeat(50));
+
+            // Start background scheduler (auto-complete PENDING transactions after 1 minute)
+            startScheduler();
         });
     } catch (error) {
         console.error('Failed to start server:', error);
