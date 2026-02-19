@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getUser } from "../../services/authService";
-import { fetchUserTransactions } from "../../services/transactionService";
+import { fetchMyTransactions } from "../../services/transactionService";
 import formatRupiah from "../../utils/currency";
 
 // Status badge colors
@@ -34,22 +33,17 @@ function formatDate(iso) {
 }
 
 export default function TransactionsPage() {
-  const user = getUser();
-  const userId = user?.id;
-
   const [pending, setPending] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const loadTransactions = useCallback(async () => {
-    if (!userId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchUserTransactions(userId, { limit: 100 });
+      const res = await fetchMyTransactions({ limit: 100 });
       const list = res?.data ?? [];
-      // Split into pending (being processed) and history (completed/failed/etc.)
       const pendingList = list.filter((t) => t.status === "PENDING");
       const historyList = list.filter((t) => t.status !== "PENDING");
       setPending(pendingList);
@@ -59,7 +53,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     loadTransactions();

@@ -24,7 +24,18 @@ export const createTransaction = async ({ user_id, product_id, customer_number }
 };
 
 /**
- * Fetch transactions for the logged-in user.
+ * Fetch transactions for the logged-in user via /me (no userId required).
+ * GET /api/transactions/me
+ */
+export const fetchMyTransactions = async ({ page = 1, limit = 50, status } = {}) => {
+  const params = { page, limit };
+  if (status) params.status = status;
+  const response = await api.get("/transactions/me", { params });
+  return response.data;
+};
+
+/**
+ * Fetch transactions for a specific user (admin use).
  * GET /api/transactions/user/:userId
  */
 export const fetchUserTransactions = async (userId, { page = 1, limit = 50, status } = {}) => {

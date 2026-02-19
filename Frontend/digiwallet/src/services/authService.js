@@ -1,5 +1,6 @@
 import axios from "axios";
 import { API_BASE_URL, API_ENDPOINTS } from "../constants";
+import { fetchConfig, clearConfig } from "./configService";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -22,6 +23,12 @@ export const loginUser = async (email, password) => {
     localStorage.setItem("user", JSON.stringify(response.data.user));
   }
 
+  // Fetch role-based config (navigation + permissions) from backend
+  const savedToken = localStorage.getItem("token");
+  if (savedToken) {
+    await fetchConfig(savedToken);
+  }
+
   return response.data;
 };
 
@@ -37,6 +44,7 @@ export const registerUser = async (userData) => {
 export const logoutUser = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
+  clearConfig();
 };
 
 export const getToken = () => localStorage.getItem("token");

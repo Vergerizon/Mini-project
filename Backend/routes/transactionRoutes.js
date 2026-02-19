@@ -48,6 +48,16 @@ router.get('/', authMiddleware, (req, res, next) => {
 }, listTransactionsValidation, transactionController.getTransactions);
 
 /**
+ * @route   GET /api/transactions/me
+ * @desc    Get transactions for the currently logged-in user (no userId needed in URL)
+ * @access  Private (any authenticated user)
+ */
+router.get('/me', authMiddleware, listTransactionsValidation, (req, res, next) => {
+    req.params.userId = req.user.id;
+    next();
+}, transactionController.getTransactionsByUser);
+
+/**
  * @route   GET /api/transactions/reference/:reference
  * @desc    Get transaction by reference number
  * @access  Public

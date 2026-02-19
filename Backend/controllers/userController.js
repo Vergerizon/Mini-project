@@ -26,8 +26,7 @@ class UserController {
                     return errorResponse(res, 'Role tidak valid', 400);
                 }
                 const user = await userService.updateUser(parseInt(req.params.id), { role });
-                const { id, ...sanitized } = user;
-                return successResponse(res, sanitized, 'Role user berhasil diubah');
+                return successResponse(res, user, 'Role user berhasil diubah');
             } catch (error) {
                 return errorResponse(
                     res,
@@ -83,7 +82,11 @@ class UserController {
                 balance_max: req.query.balance_max
             };
             const result = await userService.getUsers(page, limit, search, sortBy, sortDir, filters);
-            const sanitizedData = result.data.map(({ id, ...rest }) => rest);
+            // Admin gets full data including id; regular users get id stripped
+            const isAdmin = req.user && req.user.role === 'ADMIN';
+            const sanitizedData = isAdmin
+                ? result.data
+                : result.data.map(({ id, ...rest }) => rest);
             return paginatedResponse(
                 res, 
                 sanitizedData, 
@@ -108,8 +111,9 @@ class UserController {
     async getUserById(req, res) {
         try {
             const user = await userService.getUserById(parseInt(req.params.id));
-            const { id, ...sanitized } = user;
-            return successResponse(res, sanitized, SUCCESS_MESSAGES.USER_FETCHED);
+            const isAdmin = req.user && req.user.role === 'ADMIN';
+            const responseData = isAdmin ? user : (() => { const { id, ...rest } = user; return rest; })();
+            return successResponse(res, responseData, SUCCESS_MESSAGES.USER_FETCHED);
         } catch (error) {
             return errorResponse(
                 res, 
@@ -201,8 +205,9 @@ class UserController {
                 parseInt(req.params.id), 
                 parseFloat(amount)
             );
-            const { id, ...sanitized } = user;
-            return successResponse(res, sanitized, 'Top up berhasil');
+            const isAdmin = req.user && req.user.role === 'ADMIN';
+            const responseData = isAdmin ? user : (() => { const { id, ...rest } = user; return rest; })();
+            return successResponse(res, responseData, 'Top up berhasil');
         } catch (error) {
             return errorResponse(
                 res, 

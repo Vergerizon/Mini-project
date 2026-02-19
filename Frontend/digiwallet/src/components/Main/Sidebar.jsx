@@ -1,15 +1,34 @@
+import { useEffect } from "react";
 import { getUser } from "../../services/authService";
-import { MAIN_TEXT, NAV_ITEMS } from "../../constants";
-
-// Users only see these tabs
-const USER_TABS = ["dashboard", "transactions", "profile"];
+import { getNavigation } from "../../services/configService";
+import { MAIN_TEXT } from "../../constants";
 
 export default function Sidebar({ activeTab, onTabChange, onLogout }) {
   const user = getUser();
   const displayName = user?.name || user?.email?.split("@")[0] || "User";
   const initials = displayName.charAt(0).toUpperCase();
-  const isUser = user?.role === "USER";
-  const navItems = isUser ? NAV_ITEMS.filter((i) => USER_TABS.includes(i.id)) : NAV_ITEMS;
+
+  // Navigation items come from the backend config — no hardcoded role checks
+  let navItems = getNavigation() || [];
+
+  // Fallback to minimal nav when backend did not provide any
+  if (!navItems || navItems.length === 0) {
+    navItems = [
+      { id: "dashboard", label: "Dashboard", icon: "📊" },
+      { id: "transactions", label: "Transaksi", icon: "📋" },
+      { id: "profile", label: "Profil", icon: "👤" },
+    ];
+  }
+
+  // Ensure the active tab is valid for the current nav; if not, switch to the first available
+  useEffect(() => {
+    const found = navItems.find((i) => i.id === activeTab);
+    if (!found) {
+      const first = navItems[0]?.id || "profile";
+      onTabChange(first);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, navItems]);
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col min-h-screen">

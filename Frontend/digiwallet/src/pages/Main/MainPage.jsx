@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutUser, getUser } from "../../services/authService";
+import { getPermissions, getNavigation } from "../../services/configService";
 import ProfilePage from "../Profile/ProfilePage";
 import TransactionsPage from "../Transactions/TransactionsPage";
+import {
+  UserManagementPage,
+  CategoryManagementPage,
+  ProductManagementPage,
+  TransactionManagementPage,
+  AnalyticsDashboard,
+} from "../Admin";
 import {
   MAIN_TEXT,
   MOCK_TRANSACTIONS,
@@ -27,7 +35,21 @@ export default function MainPage() {
   const navigate = useNavigate();
   const user = getUser();
   const displayName = user?.name || user?.email?.split("@")[0] || "User";
-  const isUser = user?.role === "USER";
+
+  // All role logic comes from the backend config
+  const permissions = getPermissions();
+  const isUserDashboard = permissions.dashboardType === "user";
+
+  // Ensure active tab is valid for current nav; if not, switch to first allowed.
+  useEffect(() => {
+    const nav = getNavigation() || [];
+    if (!nav.find((n) => n.id === activeTab)) {
+      const first = nav[0]?.id || (isUserDashboard ? "dashboard" : "dashboard");
+      setActiveTab(first);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const topUpAction = QUICK_ACTIONS.find((a) => a.id === "topup");
   const userActions = [topUpAction].filter(Boolean);
   const [showTopUp, setShowTopUp] = useState(false);
@@ -70,7 +92,7 @@ export default function MainPage() {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         {/* ── USER DASHBOARD (Codashop style) ──────────────── */}
-        {isUser && activeTab === "dashboard" && (
+        {isUserDashboard && activeTab === "dashboard" && (
           <div className="min-h-screen bg-gray-50">
             {/* Compact top bar: balance + top-up */}
             <div className="bg-linear-to-r from-gray-900 to-purple-900 px-8 py-4 flex items-center justify-between">
@@ -142,8 +164,14 @@ export default function MainPage() {
         {activeTab === "profile" && <ProfilePage />}
         {activeTab === "transactions" && <TransactionsPage />}
 
+        {/* ── ADMIN-ONLY PAGES (driven by backend permissions) ─ */}
+        {permissions.canManageUsers && activeTab === "users" && <UserManagementPage />}
+        {permissions.canManageProducts && activeTab === "products" && <ProductManagementPage />}
+        {permissions.canManageCategories && activeTab === "categories" && <CategoryManagementPage />}
+        {permissions.canViewAnalytics && activeTab === "analytics" && <AnalyticsDashboard />}
+
         {/* ── ADMIN DASHBOARD ────────────────────────────── */}
-        {!isUser && activeTab !== "profile" && activeTab !== "transactions" && (
+        {!isUserDashboard && activeTab === "dashboard" && (
           <>
             {/* Admin top bar */}
             <header className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between">
