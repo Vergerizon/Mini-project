@@ -15,10 +15,11 @@ export const MAIN_TEXT = {
 export const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: "📊" },
   { id: "transactions", label: "Transactions", icon: "📋" },
-  { id: "cards", label: "Cards", icon: "💳" },
+  { id: "users", label: "User Management", icon: "👥" },
+  { id: "products", label: "Products", icon: "📦" },
+  { id: "categories", label: "Categories", icon: "🗂️" },
   { id: "analytics", label: "Analytics", icon: "📈" },
   { id: "profile", label: "Profile", icon: "👤" },
-  { id: "settings", label: "Settings", icon: "⚙️" },
 ];
 
 export const QUICK_ACTIONS = [
