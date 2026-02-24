@@ -180,7 +180,7 @@ const listProductsValidation = [
 
 const createTransactionValidation = [
     body('user_id')
-        .notEmpty().withMessage('User ID wajib diisi')
+        .optional()
         .isInt({ min: 1 }).withMessage('User ID tidak valid'),
     body('product_id')
         .notEmpty().withMessage('Product ID wajib diisi')

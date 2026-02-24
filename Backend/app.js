@@ -14,6 +14,7 @@ const routes = require('./routes');
 const { testConnection } = require('./database/config');
 const { notFoundHandler, globalErrorHandler } = require('./middleware/errorHandler');
 const { loggingMiddleware } = require('./middleware/logging');
+const prometheus = require('./middleware/prometheus');
 const { startScheduler } = require('./services/schedulerService');
 
 // Initialize Express app
@@ -68,12 +69,25 @@ app.use('/api', limiter);
 // HARUS ditempatkan SEBELUM routes agar bisa intercept response
 app.use(loggingMiddleware);
 
+// Prometheus metrics middleware - collect HTTP metrics
+app.use(prometheus.middleware);
+
 // =============================================
 // API ROUTES
 // =============================================
 
 // API routes
 app.use('/api', routes);
+
+// Expose Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+    try {
+        res.set('Content-Type', prometheus.client.register.contentType);
+        res.end(await prometheus.client.register.metrics());
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -108,7 +122,7 @@ app.use(globalErrorHandler);
 // SERVER STARTUP
 // =============================================
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || 'localhost';
 
 const startServer = async () => {
@@ -131,6 +145,7 @@ const startServer = async () => {
             console.log(`  - Transactions: http://${HOST}:${PORT}/api/transactions`);
             console.log(`  - Reports:      http://${HOST}:${PORT}/api/reports`);
             console.log(`  - Health:       http://${HOST}:${PORT}/api/health`);
+            console.log(`  - Metrics:      http://${HOST}:${PORT}/metrics`);
             console.log('='.repeat(50));
 
             // Start background scheduler (auto-complete PENDING transactions after 1 minute)

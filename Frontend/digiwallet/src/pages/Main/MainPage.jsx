@@ -54,6 +54,7 @@ export default function MainPage() {
   const userActions = [topUpAction].filter(Boolean);
   const [showTopUp, setShowTopUp] = useState(false);
   const [topUpCategory, setTopUpCategory] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [showTopUpBalance, setShowTopUpBalance] = useState(false);
   const [balanceKey, setBalanceKey] = useState(0);
 
@@ -77,6 +78,13 @@ export default function MainPage() {
 
   const handleSelectCategory = (type) => {
     setTopUpCategory(type);
+    setSelectedProduct(null);
+    setShowTopUp(true);
+  };
+
+  const handleSelectProduct = (product) => {
+    setSelectedProduct(product);
+    setTopUpCategory(null);
     setShowTopUp(true);
   };
 
@@ -149,7 +157,7 @@ export default function MainPage() {
 
             {/* Product catalog */}
             <div id="product-catalog" className="px-8 py-6">
-              <ProductCatalog onSelectCategory={handleSelectCategory} />
+              <ProductCatalog onSelectCategory={handleSelectCategory} onSelectProduct={handleSelectProduct} />
             </div>
 
             {/* Footer */}
@@ -230,8 +238,9 @@ export default function MainPage() {
       {showTopUp && (
         <TopUpModal
           initialType={topUpCategory}
-          onClose={() => { setShowTopUp(false); setTopUpCategory(null); }}
-          onSuccess={() => { setShowTopUp(false); setTopUpCategory(null); }}
+          initialProduct={selectedProduct}
+          onClose={() => { setShowTopUp(false); setTopUpCategory(null); setSelectedProduct(null); }}
+          onSuccess={() => { setShowTopUp(false); setTopUpCategory(null); setSelectedProduct(null); }}
         />
       )}
 

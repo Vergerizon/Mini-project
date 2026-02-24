@@ -60,9 +60,9 @@ class ProductController {
             };
             const result = await productService.getProducts(options);
             
-            // Filter fields for USER role
-            if (req.user && req.user.role === 'USER') {
-                result.data = result.data.map(product => this.filterProductFields(product));
+                // Filter fields for USER role or unauthenticated callers (public browsing)
+                if (!req.user || req.user.role === 'USER') {
+                    result.data = result.data.map(product => this.filterProductFields(product));
             }
             
             return paginatedResponse(
@@ -89,9 +89,9 @@ class ProductController {
         try {
             let product = await productService.getProductById(parseInt(req.params.id));
             
-            // Filter fields for USER role
-            if (req.user && req.user.role === 'USER') {
-                product = this.filterProductFields(product);
+                // Filter fields for USER role or unauthenticated callers
+                if (!req.user || req.user.role === 'USER') {
+                    product = this.filterProductFields(product);
             }
             
             return successResponse(res, product, SUCCESS_MESSAGES.PRODUCT_FETCHED);
@@ -159,9 +159,9 @@ class ProductController {
         try {
             let products = await productService.getProductsByType(req.params.type);
             
-            // Filter fields for USER role
-            if (req.user && req.user.role === 'USER') {
-                products = products.map(product => this.filterProductFields(product));
+                // Filter fields for USER role or unauthenticated callers
+                if (!req.user || req.user.role === 'USER') {
+                    products = products.map(product => this.filterProductFields(product));
             }
             
             return successResponse(res, products, SUCCESS_MESSAGES.PRODUCTS_FETCHED);
@@ -200,14 +200,18 @@ class ProductController {
 
     /**
      * Filter product fields for USER role
-     * Only show name and price
+     * Show fields needed for browsing & purchasing, hide internal/admin fields
      */
     filterProductFields(product) {
         if (!product) return product;
         
         return {
+            id: product.id,
             name: product.name,
-            price: product.price
+            description: product.description,
+            price: product.price,
+            type: product.type,
+            is_active: product.is_active
         };
     }
 }

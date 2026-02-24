@@ -15,15 +15,17 @@ const TYPE_LABELS = {
   ewallet: "E-Wallet",
 };
 
-export default function TopUpModal({ onClose, onSuccess, initialType = null }) {
+export default function TopUpModal({ onClose, onSuccess, initialType = null, initialProduct = null }) {
   const user = getUser();
-  // If initialType supplied, skip straight to product list (step 2)
-  const [step, setStep] = useState(initialType ? 2 : 1);
+  // If initialProduct supplied → skip to step 3 (customer number).
+  // If initialType supplied  → skip to step 2 (product list).
+  // Otherwise start at step 1 (pick type).
+  const [step, setStep] = useState(initialProduct ? 3 : initialType ? 2 : 1);
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
-  const [selectedType, setSelectedType] = useState(initialType);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedType, setSelectedType] = useState(initialProduct?.type ?? initialType);
+  const [selectedProduct, setSelectedProduct] = useState(initialProduct);
   const [customerNumber, setCustomerNumber] = useState("");
 
   const [submitting, setSubmitting] = useState(false);

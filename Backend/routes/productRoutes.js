@@ -32,21 +32,24 @@ router.post('/', authMiddleware, (req, res, next) => {
  * @desc    Get all products with pagination and filters
  * @access  User and Admin (read-only for user)
  */
-router.get('/', authMiddleware, listProductsValidation, productController.getProducts);
+// Public: list products (allow browsing without auth)
+router.get('/', listProductsValidation, productController.getProducts);
 
 /**
  * @route   GET /api/products/type/:type
  * @desc    Get products by type
  * @access  User and Admin (read-only for user)
  */
-router.get('/type/:type', authMiddleware, productController.getProductsByType);
+// Public: products by type
+router.get('/type/:type', productController.getProductsByType);
 
 /**
  * @route   GET /api/products/:id
  * @desc    Get product by ID
  * @access  User and Admin (read-only for user)
  */
-router.get('/:id', authMiddleware, getProductValidation, productController.getProductById);
+// Public: product details
+router.get('/:id', getProductValidation, productController.getProductById);
 
 /**
  * @route   PUT /api/products/:id

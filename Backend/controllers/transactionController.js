@@ -7,6 +7,7 @@ const {
     SUCCESS_MESSAGES,
     ERROR_MESSAGES 
 } = require('../utils/respons');
+const { transactionCreatedTotal, transactionAmountTotal } = require('../utils/metrics');
 
 class TransactionController {
     /**
@@ -38,6 +39,13 @@ class TransactionController {
                 payload.user_id = req.user.id;
             }
             const transaction = await transactionService.createTransaction(payload);
+            transactionCreatedTotal.inc({ result: 'success' });
+            if (transaction && transaction.total_price) {
+                transactionAmountTotal.inc(
+                    { status: transaction.status || 'SUCCESS' },
+                    Number(transaction.total_price)
+                );
+            }
             return successResponse(
                 res, 
                 transaction, 
@@ -45,6 +53,7 @@ class TransactionController {
                 HTTP_STATUS.CREATED
             );
         } catch (error) {
+            transactionCreatedTotal.inc({ result: 'failed' });
             return errorResponse(
                 res,
                 error && error.message ? error.message : 'Terjadi kesalahan',
